@@ -15,6 +15,8 @@ export default function ParentLoginPage() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [sendingReset, setSendingReset] = useState(false);
 
   async function handleSignup() {
     setLoading(true);
@@ -55,30 +57,24 @@ export default function ParentLoginPage() {
 
     const authUserId = data.user?.id;
 
-    if (!authUserId) {
-      setMessage(
-        "Your signup was started. If email confirmation is turned on, please check your inbox and then come back to log in."
+    if (authUserId) {
+      const { error: upsertError } = await supabase.from("parent_accounts").upsert(
+        [
+          {
+            auth_user_id: authUserId,
+            parent_name: parentName.trim() || null,
+            email: trimmedEmail,
+            client_id: (matchedClient as MatchedClient).id,
+          },
+        ],
+        { onConflict: "email" }
       );
-      setLoading(false);
-      return;
-    }
 
-    const { error: upsertError } = await supabase.from("parent_accounts").upsert(
-      [
-        {
-          auth_user_id: authUserId,
-          parent_name: parentName.trim() || null,
-          email: trimmedEmail,
-          client_id: (matchedClient as MatchedClient).id,
-        },
-      ],
-      { onConflict: "email" }
-    );
-
-    if (upsertError) {
-      setMessage("Your account was created, but the parent link failed: " + upsertError.message);
-      setLoading(false);
-      return;
+      if (upsertError) {
+        setMessage("Your account was created, but the parent link failed: " + upsertError.message);
+        setLoading(false);
+        return;
+      }
     }
 
     setMessage(
@@ -113,6 +109,35 @@ export default function ParentLoginPage() {
     }
 
     window.location.href = "/parent-portal";
+  }
+
+  async function handleForgotPassword() {
+    setSendingReset(true);
+    setMessage("");
+
+    if (!resetEmail.trim()) {
+      setMessage("Enter your email first.");
+      setSendingReset(false);
+      return;
+    }
+
+    const redirectTo = `${window.location.origin}/reset-password?mode=recovery`;
+
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      resetEmail.trim().toLowerCase(),
+      {
+        redirectTo,
+      }
+    );
+
+    if (error) {
+      setMessage(error.message);
+      setSendingReset(false);
+      return;
+    }
+
+    setMessage("Password reset email sent. Please check your inbox.");
+    setSendingReset(false);
   }
 
   return (
@@ -259,13 +284,34 @@ export default function ParentLoginPage() {
               </div>
 
               {mode === "login" ? (
-                <button
-                  onClick={handleLogin}
-                  disabled={loading}
-                  className="w-full rounded-[18px] bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-sm disabled:opacity-60"
-                >
-                  {loading ? "Logging In..." : "Log In"}
-                </button>
+                <>
+                  <button
+                    onClick={handleLogin}
+                    disabled={loading}
+                    className="w-full rounded-[18px] bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-sm disabled:opacity-60"
+                  >
+                    {loading ? "Logging In..." : "Log In"}
+                  </button>
+
+                  <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
+                    <label className="mb-2 block text-sm font-bold text-slate-700">
+                      Forgot password?
+                    </label>
+                    <input
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      placeholder="Enter your email"
+                      className="w-full rounded-[18px] border border-slate-200 bg-white p-3 text-black outline-none focus:border-sky-500"
+                    />
+                    <button
+                      onClick={handleForgotPassword}
+                      disabled={sendingReset}
+                      className="mt-3 w-full rounded-[18px] bg-violet-600 px-4 py-3 text-sm font-black text-white shadow-sm disabled:opacity-60"
+                    >
+                      {sendingReset ? "Sending..." : "Send Password Reset Email"}
+                    </button>
+                  </div>
+                </>
               ) : (
                 <button
                   onClick={handleSignup}

@@ -99,6 +99,7 @@ export default function Home() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [announcementTitle, setAnnouncementTitle] = useState("");
   const [announcementMessage, setAnnouncementMessage] = useState("");
+  const [invitingClientId, setInvitingClientId] = useState<string | null>(null);
 
   const [childName, setChildName] = useState("");
   const [parentName, setParentName] = useState("");
@@ -214,7 +215,7 @@ export default function Home() {
       {
         child_name: childName.trim(),
         parent_name: parentName.trim() || null,
-        parent_email: parentEmail.trim() || null,
+        parent_email: parentEmail.trim().toLowerCase() || null,
       },
     ]);
 
@@ -302,6 +303,54 @@ export default function Home() {
     }
 
     fetchAnnouncements();
+  }
+
+  async function inviteParent(client: Client) {
+    if (!client.parent_email?.trim()) {
+      alert("Add a parent email first.");
+      return;
+    }
+
+    const email = client.parent_email.trim().toLowerCase();
+    setInvitingClientId(client.id);
+
+    const { error: accountError } = await supabase.from("parent_accounts").upsert(
+      [
+        {
+          email,
+          parent_name: client.parent_name || null,
+          client_id: client.id,
+        },
+      ],
+      { onConflict: "email" }
+    );
+
+    if (accountError) {
+      setInvitingClientId(null);
+      alert("Could not prepare parent account: " + accountError.message);
+      return;
+    }
+
+    const redirectTo = `${window.location.origin}/reset-password?mode=invite`;
+
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: true,
+        emailRedirectTo: redirectTo,
+      },
+    });
+
+    setInvitingClientId(null);
+
+    if (error) {
+      alert("Error sending invite: " + error.message);
+      return;
+    }
+
+    alert(
+      `Invite sent to ${email}. They can open the email link, create a password, and access the parent portal.`
+    );
   }
 
   async function completeLesson(pkg: LessonPackage) {
@@ -928,6 +977,16 @@ export default function Home() {
                       >
                         {getParentPortalStatus(client).label}
                       </div>
+
+                      {client.parent_email?.trim() ? (
+                        <button
+                          onClick={() => inviteParent(client)}
+                          disabled={invitingClientId === client.id}
+                          className="rounded-full bg-violet-600 px-4 py-2 text-sm font-black text-white shadow disabled:opacity-60"
+                        >
+                          {invitingClientId === client.id ? "Sending..." : "Invite Parent"}
+                        </button>
+                      ) : null}
                     </div>
                   </div>
 
