@@ -421,7 +421,7 @@ export default function Home() {
   function getParentPortalStatus(client: Client) {
     if (client.parent_email && client.parent_email.trim()) {
       return {
-        label: "Parent Portal Ready",
+        label: "Parent Access Enabled",
         color: "bg-emerald-100 text-emerald-700",
       };
     }
@@ -482,7 +482,7 @@ export default function Home() {
 
   async function deletePackage(packageId: string) {
     const confirmed = window.confirm(
-      "Delete this package? This will not delete lesson rows automatically unless your database is set up for cascading deletes."
+      "Delete this package? This may fail if lessons or notes still reference it."
     );
     if (!confirmed) return;
 
@@ -613,7 +613,7 @@ export default function Home() {
           </div>
         </section>
 
-        <div className="mb-6 grid gap-4 md:grid-cols-5">
+        <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-5">
           <div className="rounded-[28px] border border-sky-200 bg-white p-5 text-center shadow-sm">
             <div className="text-3xl">👧</div>
             <p className="mt-2 text-sm font-bold text-slate-500">Clients</p>
@@ -640,7 +640,7 @@ export default function Home() {
 
           <div className="rounded-[28px] border border-violet-200 bg-white p-5 text-center shadow-sm">
             <div className="text-3xl">🔐</div>
-            <p className="mt-2 text-sm font-bold text-slate-500">Portal Ready</p>
+            <p className="mt-2 text-sm font-bold text-slate-500">Parent Access</p>
             <p className="mt-1 text-4xl font-black text-violet-600">
               {parentPortalReadyCount}
             </p>
@@ -945,6 +945,25 @@ export default function Home() {
                         };
                         const isEditingPackage = editingPackageId === pkg.id;
 
+                        const remainingCardClasses =
+                          remaining <= 0
+                            ? "bg-rose-100 text-rose-700 border-rose-300"
+                            : remaining <= 2
+                            ? "bg-red-100 text-red-700 border-red-300"
+                            : "bg-white text-amber-500 border-slate-200";
+
+                        const remainingBadgeClasses =
+                          remaining <= 0
+                            ? "bg-rose-600 text-white"
+                            : remaining <= 2
+                            ? "bg-red-100 text-red-700"
+                            : "bg-emerald-100 text-emerald-700";
+
+                        const progressPercent =
+                          pkg.lessons_total > 0
+                            ? Math.round((pkg.lessons_used / pkg.lessons_total) * 100)
+                            : 0;
+
                         return (
                           <div
                             key={pkg.id}
@@ -968,6 +987,16 @@ export default function Home() {
                                   )}`}
                                 >
                                   {(pkg.payment_status || "unpaid").toUpperCase()}
+                                </div>
+
+                                <div
+                                  className={`rounded-full px-4 py-2 text-sm font-black ${remainingBadgeClasses}`}
+                                >
+                                  {remaining <= 0
+                                    ? "No Lessons Left"
+                                    : remaining <= 2
+                                    ? `Only ${remaining} Left`
+                                    : `${remaining} Left`}
                                 </div>
 
                                 {!isEditingPackage ? (
@@ -1105,7 +1134,7 @@ export default function Home() {
                               </div>
                             ) : null}
 
-                            <div className="mb-4 grid gap-3 md:grid-cols-4">
+                            <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
                               <div className="rounded-[22px] border border-slate-200 bg-white p-4 text-center">
                                 <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
                                   Total Lessons
@@ -1124,17 +1153,11 @@ export default function Home() {
                                 </p>
                               </div>
 
-                              <div className="rounded-[22px] border border-slate-200 bg-white p-4 text-center">
-                                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                              <div className={`rounded-[22px] border p-4 text-center ${remainingCardClasses}`}>
+                                <p className="text-xs font-bold uppercase tracking-wide">
                                   Lessons Remaining
                                 </p>
-                                <p
-                                  className={`mt-1 text-4xl font-black ${
-                                    remaining <= 2 ? "text-rose-500" : "text-amber-500"
-                                  }`}
-                                >
-                                  {remaining}
-                                </p>
+                                <p className="mt-1 text-4xl font-black">{remaining}</p>
                               </div>
 
                               <div className="rounded-[22px] border border-slate-200 bg-white p-4 text-center">
@@ -1142,12 +1165,27 @@ export default function Home() {
                                   Progress
                                 </p>
                                 <p className="mt-1 text-4xl font-black text-emerald-600">
-                                  {pkg.lessons_total > 0
-                                    ? `${Math.round(
-                                        (pkg.lessons_used / pkg.lessons_total) * 100
-                                      )}%`
-                                    : "0%"}
+                                  {progressPercent}%
                                 </p>
+                              </div>
+                            </div>
+
+                            <div className="mb-5">
+                              <div className="mb-2 flex items-center justify-between text-sm font-semibold text-slate-600">
+                                <span>Package Progress</span>
+                                <span>{progressPercent}%</span>
+                              </div>
+                              <div className="h-4 overflow-hidden rounded-full bg-slate-200">
+                                <div
+                                  className={`h-full rounded-full ${
+                                    remaining <= 0
+                                      ? "bg-rose-500"
+                                      : remaining <= 2
+                                      ? "bg-red-500"
+                                      : "bg-gradient-to-r from-cyan-500 to-blue-600"
+                                  }`}
+                                  style={{ width: `${progressPercent}%` }}
+                                />
                               </div>
                             </div>
 
@@ -1425,7 +1463,7 @@ export default function Home() {
                                           </div>
                                         ) : (
                                           <>
-                                            <div className="grid gap-3 md:grid-cols-4">
+                                            <div className="grid gap-4 md:grid-cols-2">
                                               <div>
                                                 <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
                                                   Skills Worked On
