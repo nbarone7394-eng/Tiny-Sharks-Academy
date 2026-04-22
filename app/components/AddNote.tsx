@@ -1,3 +1,11 @@
+const [lessonDate, setLessonDate] = useState(
+  new Date().toISOString().split("T")[0]
+);
+const [skillsWorkedOn, setSkillsWorkedOn] = useState("");
+const [progressLevel, setProgressLevel] = useState("");
+const [lessonNotes, setLessonNotes] = useState("");
+const [nextFocus, setNextFocus] = useState("");
+const [savingLessonNote, setSavingLessonNote] = useState(false);
 <div className="rounded-[32px] border border-sky-100 bg-white p-6 shadow-sm md:p-8">
   <h2 className="mb-6 text-2xl font-bold text-sky-800">✏️ Add Lesson Note</h2>
 
