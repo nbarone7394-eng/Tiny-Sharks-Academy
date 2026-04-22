@@ -4,151 +4,96 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function ParentPortal() {
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
-  const [packages, setPackages] = useState<any[]>([]);
-  const [lessons, setLessons] = useState<any[]>([]);
   const [notes, setNotes] = useState<any[]>([]);
-  const [error, setError] = useState("");
 
   useEffect(() => {
-    loadData();
+    getUser();
   }, []);
 
-  async function loadData() {
-    setLoading(true);
-    setError("");
-
-    // 1. Get logged-in user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      setError("You must be logged in.");
-      setLoading(false);
-      return;
+  async function getUser() {
+    const { data } = await supabase.auth.getUser();
+    if (data?.user) {
+      setUser(data.user);
+      fetchData(data.user.id);
     }
+  }
 
-    // 2. Get parent account
-    const { data: parent, error: parentError } = await supabase
+  async function fetchData(userId: string) {
+    // get parent account
+    const { data: parent } = await supabase
       .from("parent_accounts")
       .select("*")
-      .eq("auth_user_id", user.id)
+      .eq("auth_user_id", userId)
       .single();
 
-    if (parentError || !parent) {
-      setError("Parent account not found.");
-      setLoading(false);
-      return;
-    }
+    if (!parent) return;
 
-    // 3. Get clients for this parent
-    const { data: clientData, error: clientError } = await supabase
+    // get clients tied to parent
+    const { data: clientData } = await supabase
       .from("clients")
       .select("*")
       .eq("parent_account_id", parent.id);
 
-    if (clientError) {
-      setError(clientError.message);
-      setLoading(false);
-      return;
-    }
-
     setClients(clientData || []);
 
-    const clientIds = (clientData || []).map((c) => c.id);
+    if (!clientData || clientData.length === 0) return;
 
-    if (clientIds.length === 0) {
-      setLoading(false);
-      return;
-    }
+    const clientIds = clientData.map((c) => c.id);
 
-    // 4. Get packages
-    const { data: packageData } = await supabase
-      .from("packages")
-      .select("*")
-      .in("client_id", clientIds);
-
-    // 5. Get lessons
-    const { data: lessonData } = await supabase
-      .from("lessons")
+    // get progress notes
+    const { data: notesData } = await supabase
+      .from("progress_notes")
       .select("*")
       .in("client_id", clientIds)
       .order("lesson_date", { ascending: false });
 
-    // 6. Get progress notes
-    const { data: noteData } = await supabase
-      .from("progress_notes")
-      .select("*")
-      .in("client_id", clientIds)
-      .order("created_at", { ascending: false });
-
-    setPackages(packageData || []);
-    setLessons(lessonData || []);
-    setNotes(noteData || []);
-    setLoading(false);
-  }
-
-  if (loading) {
-    return <p className="p-6">Loading your dashboard...</p>;
-  }
-
-  if (error) {
-    return <p className="p-6 text-red-600">{error}</p>;
+    setNotes(notesData || []);
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <h1 className="text-3xl font-bold text-sky-700 mb-6">
-        🐬 Parent Portal
-      </h1>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">Parent Portal</h1>
 
       {/* CLIENTS */}
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-2">Your Swimmers</h2>
-        {clients.length === 0 ? (
-          <p>No swimmers found.</p>
-        ) : (
-          clients.map((client) => (
-            <div key={client.id} className="mb-2 rounded-xl bg-white p-4 shadow">
-              <p className="font-semibold">{client.child_name}</p>
-            </div>
-          ))
-        )}
-      </div>
-
-      {/* PACKAGES */}
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-2">Packages</h2>
-        {packages.map((pkg) => (
-          <div key={pkg.id} className="mb-2 rounded-xl bg-white p-4 shadow">
-            <p>Lessons Remaining: {pkg.lessons_remaining}</p>
+      <h2 className="text-xl font-semibold mb-2">Your Swimmers</h2>
+      {clients.length === 0 ? (
+        <p>No swimmers found.</p>
+      ) : (
+        clients.map((client) => (
+          <div key={client.id} className="mb-3 p-3 bg-white rounded shadow">
+            <p className="font-semibold">{client.child_name}</p>
           </div>
-        ))}
-      </div>
+        ))
+      )}
 
-      {/* LESSONS */}
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-2">Recent Lessons</h2>
-        {lessons.map((lesson) => (
-          <div key={lesson.id} className="mb-2 rounded-xl bg-white p-4 shadow">
-            <p>Date: {lesson.lesson_date}</p>
-            <p>Status: {lesson.status}</p>
-          </div>
-        ))}
-      </div>
+      {/* PROGRESS NOTES */}
+      <h2 className="text-xl font-semibold mt-6 mb-2">Progress Notes</h2>
 
-      {/* NOTES */}
-      <div>
-        <h2 className="text-xl font-semibold mb-2">Progress Notes</h2>
-        {notes.map((note) => (
-          <div key={note.id} className="mb-2 rounded-xl bg-white p-4 shadow">
+      {notes.length === 0 ? (
+        <p>No progress notes yet.</p>
+      ) : (
+        notes.map((note) => (
+          <div
+            key={note.id}
+            className="mb-3 p-4 bg-white rounded-xl shadow"
+          >
+            <p className="text-sm text-gray-500 mb-1">
+              Lesson Date:{" "}
+              {note.lesson_date
+                ? new Date(note.lesson_date).toLocaleDateString()
+                : "N/A"}
+            </p>
+
+            <p className="text-sm text-gray-400 mb-2">
+              Child ID: {note.client_id}
+            </p>
+
             <p>{note.note}</p>
           </div>
-        ))}
-      </div>
-    </main>
+        ))
+      )}
+    </div>
   );
 }
