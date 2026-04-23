@@ -1603,4 +1603,4 @@ export default function Home() {
     </main>
   );
 }
-import AddNote from "./components/AddNote";
+import AddNote from "./components/AddLessonNote";
