@@ -21,11 +21,18 @@ type PackageRow = {
   package_name?: string | null;
 };
 
+type LessonFormState = {
+  lessonDate: string;
+  status: string;
+};
+
 export default function Home() {
   const [clients, setClients] = useState<Client[]>([]);
   const [packages, setPackages] = useState<PackageRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [savingClientId, setSavingClientId] = useState<string | null>(null);
+  const [lessonForms, setLessonForms] = useState<Record<string, LessonFormState>>({});
 
   useEffect(() => {
     fetchData();
@@ -58,8 +65,21 @@ export default function Home() {
       return;
     }
 
-    setClients(clientData || []);
-    setPackages(packageData || []);
+    const safeClients = clientData || [];
+    const safePackages = packageData || [];
+
+    setClients(safeClients);
+    setPackages(safePackages);
+
+    const initialForms: Record<string, LessonFormState> = {};
+    for (const client of safeClients) {
+      initialForms[client.id] = {
+        lessonDate: new Date().toISOString().split("T")[0],
+        status: "completed",
+      };
+    }
+    setLessonForms(initialForms);
+
     setLoading(false);
   }
 
@@ -73,15 +93,108 @@ export default function Home() {
 
   function getRemainingLessons(pkg: PackageRow) {
     if (pkg.lessons_remaining !== undefined && pkg.lessons_remaining !== null) {
-      return pkg.lessons_remaining;
+      return Number(pkg.lessons_remaining);
     }
     if (pkg.lessons_left !== undefined && pkg.lessons_left !== null) {
-      return pkg.lessons_left;
+      return Number(pkg.lessons_left);
     }
     if (pkg.remaining_lessons !== undefined && pkg.remaining_lessons !== null) {
-      return pkg.remaining_lessons;
+      return Number(pkg.remaining_lessons);
     }
     return 0;
+  }
+
+  function setRemainingLessonsUpdate(pkg: PackageRow, newValue: number) {
+    if (pkg.lessons_remaining !== undefined) {
+      return { lessons_remaining: newValue };
+    }
+    if (pkg.lessons_left !== undefined) {
+      return { lessons_left: newValue };
+    }
+    if (pkg.remaining_lessons !== undefined) {
+      return { remaining_lessons: newValue };
+    }
+    return { lessons_remaining: newValue };
+  }
+
+  function updateLessonForm(
+    clientId: string,
+    field: keyof LessonFormState,
+    value: string
+  ) {
+    setLessonForms((prev) => ({
+      ...prev,
+      [clientId]: {
+        ...(prev[clientId] || {
+          lessonDate: new Date().toISOString().split("T")[0],
+          status: "completed",
+        }),
+        [field]: value,
+      },
+    }));
+  }
+
+  async function handleCompleteLesson(clientId: string) {
+    const form = lessonForms[clientId];
+
+    if (!form?.lessonDate) {
+      alert("Please choose a lesson date.");
+      return;
+    }
+
+    const clientPackages = getClientPackages(clientId);
+    const activePackage = clientPackages[0] || null;
+
+    setSavingClientId(clientId);
+
+    const lessonInsert: {
+      client_id: string;
+      lesson_date: string;
+      status: string;
+      package_id?: string;
+    } = {
+      client_id: clientId,
+      lesson_date: form.lessonDate,
+      status: form.status || "completed",
+    };
+
+    if (activePackage?.id) {
+      lessonInsert.package_id = activePackage.id;
+    }
+
+    const { error: lessonError } = await supabase
+      .from("lessons")
+      .insert(lessonInsert);
+
+    if (lessonError) {
+      console.error(lessonError);
+      alert("Error saving lesson: " + lessonError.message);
+      setSavingClientId(null);
+      return;
+    }
+
+    if (activePackage?.id) {
+      const remaining = getRemainingLessons(activePackage);
+
+      if (remaining > 0) {
+        const { error: packageUpdateError } = await supabase
+          .from("packages")
+          .update(setRemainingLessonsUpdate(activePackage, remaining - 1))
+          .eq("id", activePackage.id);
+
+        if (packageUpdateError) {
+          console.error(packageUpdateError);
+          alert("Lesson saved, but package did not update: " + packageUpdateError.message);
+          setSavingClientId(null);
+          await fetchData();
+          return;
+        }
+      }
+    }
+
+    alert("Lesson completed successfully.");
+    setSavingClientId(null);
+    await fetchData();
   }
 
   if (loading) {
@@ -118,6 +231,10 @@ export default function Home() {
           <div className="space-y-4">
             {clients.map((client) => {
               const clientPackages = getClientPackages(client.id);
+              const form = lessonForms[client.id] || {
+                lessonDate: new Date().toISOString().split("T")[0],
+                status: "completed",
+              };
 
               return (
                 <div
@@ -173,6 +290,54 @@ export default function Home() {
                         ))}
                       </div>
                     )}
+                  </div>
+
+                  <div className="mt-5 rounded-xl border border-slate-200 p-4">
+                    <h3 className="mb-3 text-lg font-semibold text-sky-700">
+                      Complete Lesson
+                    </h3>
+
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-slate-700">
+                          Lesson Date
+                        </label>
+                        <input
+                          type="date"
+                          value={form.lessonDate}
+                          onChange={(e) =>
+                            updateLessonForm(client.id, "lessonDate", e.target.value)
+                          }
+                          className="w-full rounded-xl border border-slate-300 px-3 py-2"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-slate-700">
+                          Status
+                        </label>
+                        <select
+                          value={form.status}
+                          onChange={(e) =>
+                            updateLessonForm(client.id, "status", e.target.value)
+                          }
+                          className="w-full rounded-xl border border-slate-300 px-3 py-2"
+                        >
+                          <option value="completed">completed</option>
+                          <option value="scheduled">scheduled</option>
+                          <option value="cancelled">cancelled</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleCompleteLesson(client.id)}
+                      disabled={savingClientId === client.id}
+                      className="mt-4 rounded-xl bg-sky-600 px-4 py-2 font-semibold text-white disabled:opacity-60"
+                    >
+                      {savingClientId === client.id ? "Saving..." : "Complete Lesson"}
+                    </button>
                   </div>
                 </div>
               );
