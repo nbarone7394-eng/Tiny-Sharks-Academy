@@ -12,7 +12,7 @@ type Client = {
 type PackageRow = {
   id: string;
   client_id: string;
-  lessons_remaining: number | null;
+  [key: string]: any;
 };
 
 type LessonRow = {
@@ -67,7 +67,7 @@ export default function ParentPortalPage() {
 
     const { data: parentAccount, error: parentError } = await supabase
       .from("parent_accounts")
-      .select("id, auth_user_id, parent_name, email, parent_email")
+      .select("id, auth_user_id, parent_name, email")
       .eq("auth_user_id", user.id)
       .single();
 
@@ -104,7 +104,7 @@ export default function ParentPortalPage() {
 
     const { data: packageData, error: packageError } = await supabase
       .from("packages")
-      .select("id, client_id, lessons_remaining")
+      .select("*")
       .in("client_id", clientIds);
 
     if (packageError) {
@@ -155,6 +155,25 @@ export default function ParentPortalPage() {
     const date = new Date(dateString);
     if (Number.isNaN(date.getTime())) return "N/A";
     return date.toLocaleDateString();
+  }
+
+  function getPackageSummary(pkg: PackageRow) {
+    if (pkg.lessons_remaining !== undefined && pkg.lessons_remaining !== null) {
+      return `Lessons Remaining: ${pkg.lessons_remaining}`;
+    }
+    if (pkg.lessons_left !== undefined && pkg.lessons_left !== null) {
+      return `Lessons Remaining: ${pkg.lessons_left}`;
+    }
+    if (pkg.remaining_lessons !== undefined && pkg.remaining_lessons !== null) {
+      return `Lessons Remaining: ${pkg.remaining_lessons}`;
+    }
+    if (pkg.total_lessons !== undefined && pkg.total_lessons !== null) {
+      return `Total Lessons: ${pkg.total_lessons}`;
+    }
+    if (pkg.package_size !== undefined && pkg.package_size !== null) {
+      return `Package Size: ${pkg.package_size}`;
+    }
+    return "Package on file";
   }
 
   if (loading) {
@@ -229,9 +248,7 @@ export default function ParentPortalPage() {
               {packages.map((pkg) => (
                 <div key={pkg.id} className="rounded-2xl border border-slate-200 p-4">
                   <p className="font-semibold text-slate-800">{getChildName(pkg.client_id)}</p>
-                  <p className="mt-1 text-slate-600">
-                    Lessons Remaining: {pkg.lessons_remaining ?? 0}
-                  </p>
+                  <p className="mt-1 text-slate-600">{getPackageSummary(pkg)}</p>
                 </div>
               ))}
             </div>
