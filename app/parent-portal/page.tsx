@@ -191,7 +191,7 @@ export default function ParentPortalPage() {
       pkg.lessons_remaining ??
       pkg.lessons_left ??
       pkg.remaining_lessons ??
-      (getNumber(totalLessons) - getNumber(lessonsUsed));
+      Math.max(getNumber(totalLessons) - getNumber(lessonsUsed), 0);
 
     const progressPercent =
       getNumber(totalLessons) > 0
@@ -271,211 +271,241 @@ export default function ParentPortalPage() {
           </div>
         ) : (
           <div className="space-y-8">
-            {grouped.map(({ client, packages: clientPackages, lessons: clientLessons, notes: clientNotes }) => (
-              <section
-                key={client.id}
-                className="rounded-[32px] border border-sky-100 bg-[#eef8ff] p-6 shadow-sm"
-              >
-                <div className="mb-5 rounded-[28px] bg-white p-5 shadow-sm">
-                  <h2 className="text-3xl font-bold text-sky-800">{client.child_name}</h2>
-                </div>
+            {grouped.map(
+              ({
+                client,
+                packages: clientPackages,
+                lessons: clientLessons,
+                notes: clientNotes,
+              }) => (
+                <section
+                  key={client.id}
+                  className="rounded-[32px] border border-sky-100 bg-[#eef8ff] p-6 shadow-sm"
+                >
+                  <div className="mb-5 rounded-[28px] bg-white p-5 shadow-sm">
+                    <h2 className="text-3xl font-bold text-sky-800">
+                      {client.child_name}
+                    </h2>
+                  </div>
 
-                <div className="mb-6 rounded-[28px] bg-white p-5 shadow-sm">
-                  <h3 className="mb-4 text-2xl font-bold text-sky-800">Packages</h3>
+                  <div className="mb-6 rounded-[28px] bg-white p-5 shadow-sm">
+                    <h3 className="mb-4 text-2xl font-bold text-sky-800">
+                      Packages
+                    </h3>
 
-                  {clientPackages.length === 0 ? (
-                    <p className="text-slate-600">No packages on file.</p>
-                  ) : (
-                    <div className="space-y-5">
-                      {clientPackages.map((pkg) => {
-                        const stats = getPackageStats(pkg);
+                    {clientPackages.length === 0 ? (
+                      <p className="text-slate-600">No packages on file.</p>
+                    ) : (
+                      <div className="space-y-5">
+                        {clientPackages.map((pkg) => {
+                          const stats = getPackageStats(pkg);
 
-                        return (
-                          <div
-                            key={pkg.id}
-                            className="rounded-[28px] border border-sky-100 bg-[#f8fcff] p-5"
-                          >
-                            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                              <div>
-                                <p className="text-xl font-bold text-sky-800">
-                                  🎯 {stats.packageName}
-                                </p>
-                                <p className="text-sm text-slate-500">Active package</p>
+                          return (
+                            <div
+                              key={pkg.id}
+                              className="rounded-[28px] border border-sky-100 bg-[#f8fcff] p-5"
+                            >
+                              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                  <p className="text-xl font-bold text-sky-800">
+                                    🎯 {stats.packageName}
+                                  </p>
+                                  <p className="text-sm text-slate-500">
+                                    Active package
+                                  </p>
+                                </div>
+
+                                <div className="rounded-full bg-emerald-100 px-4 py-2 text-sm font-bold text-emerald-700">
+                                  {stats.lessonsRemaining} Left
+                                </div>
                               </div>
 
-                              <div className="rounded-full bg-emerald-100 px-4 py-2 text-sm font-bold text-emerald-700">
-                                {stats.lessonsRemaining} Left
+                              <div className="grid gap-4 md:grid-cols-4">
+                                <div className="rounded-2xl border bg-white p-4 text-center">
+                                  <p className="text-xs font-bold uppercase text-slate-500">
+                                    Total Lessons
+                                  </p>
+                                  <p className="mt-2 text-3xl font-bold text-sky-700">
+                                    {stats.totalLessons}
+                                  </p>
+                                </div>
+
+                                <div className="rounded-2xl border bg-white p-4 text-center">
+                                  <p className="text-xs font-bold uppercase text-slate-500">
+                                    Lessons Used
+                                  </p>
+                                  <p className="mt-2 text-3xl font-bold text-blue-600">
+                                    {stats.lessonsUsed}
+                                  </p>
+                                </div>
+
+                                <div className="rounded-2xl border bg-white p-4 text-center">
+                                  <p className="text-xs font-bold uppercase text-orange-500">
+                                    Lessons Remaining
+                                  </p>
+                                  <p className="mt-2 text-3xl font-bold text-orange-500">
+                                    {stats.lessonsRemaining}
+                                  </p>
+                                </div>
+
+                                <div className="rounded-2xl border bg-white p-4 text-center">
+                                  <p className="text-xs font-bold uppercase text-slate-500">
+                                    Progress
+                                  </p>
+                                  <p className="mt-2 text-3xl font-bold text-emerald-600">
+                                    {stats.progressPercent}%
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="mt-4">
+                                <div className="mb-1 flex items-center justify-between text-sm text-slate-500">
+                                  <span>Package Progress</span>
+                                  <span>{stats.progressPercent}%</span>
+                                </div>
+                                <div className="h-3 rounded-full bg-slate-200">
+                                  <div
+                                    className="h-3 rounded-full bg-sky-500"
+                                    style={{
+                                      width: `${Math.min(
+                                        stats.progressPercent,
+                                        100
+                                      )}%`,
+                                    }}
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="mt-4 grid gap-4 md:grid-cols-3">
+                                <div className="rounded-2xl border bg-white p-4">
+                                  <p className="text-xs font-bold uppercase text-slate-500">
+                                    Payment Status
+                                  </p>
+                                  <p className="mt-2 font-semibold text-slate-800">
+                                    {String(stats.paymentStatus)}
+                                  </p>
+                                </div>
+
+                                <div className="rounded-2xl border bg-white p-4">
+                                  <p className="text-xs font-bold uppercase text-slate-500">
+                                    Package Price
+                                  </p>
+                                  <p className="mt-2 font-semibold text-slate-800">
+                                    {stats.packagePrice
+                                      ? `$${stats.packagePrice}`
+                                      : "N/A"}
+                                  </p>
+                                </div>
+
+                                <div className="rounded-2xl border bg-white p-4">
+                                  <p className="text-xs font-bold uppercase text-slate-500">
+                                    Purchase Date
+                                  </p>
+                                  <p className="mt-2 font-semibold text-slate-800">
+                                    {formatDate(stats.purchaseDate)}
+                                  </p>
+                                </div>
                               </div>
                             </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
 
-                            <div className="grid gap-4 md:grid-cols-4">
-                              <div className="rounded-2xl border bg-white p-4 text-center">
+                  <div className="mb-6 rounded-[28px] bg-white p-5 shadow-sm">
+                    <h3 className="mb-4 text-2xl font-bold text-sky-800">
+                      Lesson History
+                    </h3>
+
+                    {clientLessons.length === 0 ? (
+                      <div className="rounded-2xl bg-[#f1f8fd] p-4 text-slate-600">
+                        No lesson history yet.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {clientLessons.map((lesson) => (
+                          <div
+                            key={lesson.id}
+                            className="rounded-2xl border border-sky-100 bg-[#f8fcff] p-4"
+                          >
+                            <p className="font-semibold text-slate-800">
+                              Date: {formatDate(lesson.lesson_date)}
+                            </p>
+                            <p className="text-slate-600">
+                              Status: {lesson.status || "N/A"}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="rounded-[28px] bg-white p-5 shadow-sm">
+                    <h3 className="mb-4 text-2xl font-bold text-sky-800">
+                      Progress Notes
+                    </h3>
+
+                    {clientNotes.length === 0 ? (
+                      <div className="rounded-2xl bg-[#f1f8fd] p-4 text-slate-600">
+                        No progress notes yet.
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {clientNotes.map((note) => (
+                          <div
+                            key={note.id}
+                            className="rounded-[24px] border border-sky-100 bg-[#f8fcff] p-5"
+                          >
+                            <div className="grid gap-4 md:grid-cols-2">
+                              <div>
                                 <p className="text-xs font-bold uppercase text-slate-500">
-                                  Total Lessons
+                                  Skills Worked On
                                 </p>
-                                <p className="mt-2 text-3xl font-bold text-sky-700">
-                                  {stats.totalLessons}
-                                </p>
-                              </div>
-
-                              <div className="rounded-2xl border bg-white p-4 text-center">
-                                <p className="text-xs font-bold uppercase text-slate-500">
-                                  Lessons Used
-                                </p>
-                                <p className="mt-2 text-3xl font-bold text-blue-600">
-                                  {stats.lessonsUsed}
+                                <p className="mt-1 font-semibold text-slate-800">
+                                  {note.skills_worked_on || "—"}
                                 </p>
                               </div>
 
-                              <div className="rounded-2xl border bg-white p-4 text-center">
-                                <p className="text-xs font-bold uppercase text-orange-500">
-                                  Lessons Remaining
-                                </p>
-                                <p className="mt-2 text-3xl font-bold text-orange-500">
-                                  {stats.lessonsRemaining}
-                                </p>
-                              </div>
-
-                              <div className="rounded-2xl border bg-white p-4 text-center">
+                              <div>
                                 <p className="text-xs font-bold uppercase text-slate-500">
                                   Progress
                                 </p>
-                                <p className="mt-2 text-3xl font-bold text-emerald-600">
-                                  {stats.progressPercent}%
+                                <p className="mt-1 text-xl text-amber-500">
+                                  {getProgressStars(note.progress_level)}
                                 </p>
                               </div>
                             </div>
 
                             <div className="mt-4">
-                              <div className="mb-1 flex items-center justify-between text-sm text-slate-500">
-                                <span>Package Progress</span>
-                                <span>{stats.progressPercent}%</span>
-                              </div>
-                              <div className="h-3 rounded-full bg-slate-200">
-                                <div
-                                  className="h-3 rounded-full bg-sky-500"
-                                  style={{ width: `${Math.min(stats.progressPercent, 100)}%` }}
-                                />
-                              </div>
-                            </div>
-
-                            <div className="mt-4 grid gap-4 md:grid-cols-3">
-                              <div className="rounded-2xl border bg-white p-4">
-                                <p className="text-xs font-bold uppercase text-slate-500">
-                                  Payment Status
-                                </p>
-                                <p className="mt-2 font-semibold text-slate-800">
-                                  {String(stats.paymentStatus)}
-                                </p>
-                              </div>
-
-                              <div className="rounded-2xl border bg-white p-4">
-                                <p className="text-xs font-bold uppercase text-slate-500">
-                                  Package Price
-                                </p>
-                                <p className="mt-2 font-semibold text-slate-800">
-                                  {stats.packagePrice ? `$${stats.packagePrice}` : "N/A"}
-                                </p>
-                              </div>
-
-                              <div className="rounded-2xl border bg-white p-4">
-                                <p className="text-xs font-bold uppercase text-slate-500">
-                                  Purchase Date
-                                </p>
-                                <p className="mt-2 font-semibold text-slate-800">
-                                  {formatDate(stats.purchaseDate)}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                <div className="mb-6 rounded-[28px] bg-white p-5 shadow-sm">
-                  <h3 className="mb-4 text-2xl font-bold text-sky-800">Recent Lessons</h3>
-
-                  {clientLessons.length === 0 ? (
-                    <div className="rounded-2xl bg-[#f1f8fd] p-4 text-slate-600">
-                      No lesson history yet.
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {clientLessons.map((lesson) => (
-                        <div
-                          key={lesson.id}
-                          className="rounded-2xl border border-sky-100 bg-[#f8fcff] p-4"
-                        >
-                          <p className="font-semibold text-slate-800">
-                            Date: {formatDate(lesson.lesson_date)}
-                          </p>
-                          <p className="text-slate-600">
-                            Status: {lesson.status || "N/A"}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="rounded-[28px] bg-white p-5 shadow-sm">
-                  <h3 className="mb-4 text-2xl font-bold text-sky-800">Progress Notes</h3>
-
-                  {clientNotes.length === 0 ? (
-                    <div className="rounded-2xl bg-[#f1f8fd] p-4 text-slate-600">
-                      No progress notes yet.
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {clientNotes.map((note) => (
-                        <div
-                          key={note.id}
-                          className="rounded-[24px] border border-sky-100 bg-[#f8fcff] p-5"
-                        >
-                          <div className="grid gap-4 md:grid-cols-2">
-                            <div>
                               <p className="text-xs font-bold uppercase text-slate-500">
-                                Skills Worked On
+                                Notes
                               </p>
-                              <p className="mt-1 font-semibold text-slate-800">
-                                {note.skills_worked_on || "—"}
+                              <p className="mt-1 text-slate-700">
+                                {note.note || "—"}
                               </p>
                             </div>
 
-                            <div>
+                            <div className="mt-4">
                               <p className="text-xs font-bold uppercase text-slate-500">
-                                Progress
+                                Next Focus
                               </p>
-                              <p className="mt-1 text-xl text-amber-500">
-                                {getProgressStars(note.progress_level)}
+                              <p className="mt-1 text-slate-700">
+                                {note.next_focus || "—"}
                               </p>
                             </div>
-                          </div>
 
-                          <div className="mt-4">
-                            <p className="text-xs font-bold uppercase text-slate-500">Notes</p>
-                            <p className="mt-1 text-slate-700">{note.note || "—"}</p>
-                          </div>
-
-                          <div className="mt-4">
-                            <p className="text-xs font-bold uppercase text-slate-500">
-                              Next Focus
+                            <p className="mt-4 text-sm text-slate-500">
+                              {formatDate(note.lesson_date)}
                             </p>
-                            <p className="mt-1 text-slate-700">{note.next_focus || "—"}</p>
                           </div>
-
-                          <p className="mt-4 text-sm text-slate-500">
-                            {formatDate(note.lesson_date)}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </section>
-            ))}
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </section>
+              )
+            )}
           </div>
         )}
       </div>
