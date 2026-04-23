@@ -147,9 +147,9 @@ export default function ParentPortalPage() {
 
   const grouped = useMemo(() => {
     return clients.map((client) => {
-      const clientPackages = packages.filter((p) => p.client_id === client.id);
-      const clientLessons = lessons.filter((l) => l.client_id === client.id);
-      const clientNotes = notes.filter((n) => n.client_id === client.id);
+      const clientPackages = packages.filter((pkg) => pkg.client_id === client.id);
+      const clientLessons = lessons.filter((lesson) => lesson.client_id === client.id);
+      const clientNotes = notes.filter((note) => note.client_id === client.id);
 
       return {
         client,
@@ -167,7 +167,7 @@ export default function ParentPortalPage() {
     return date.toLocaleDateString();
   }
 
-  function getNumber(value: any, fallback = 0) {
+  function toNumber(value: any, fallback = 0) {
     if (value === null || value === undefined || value === "") return fallback;
     const n = Number(value);
     return Number.isNaN(n) ? fallback : n;
@@ -179,6 +179,7 @@ export default function ParentPortalPage() {
       pkg.package_size ??
       pkg.lessons_total ??
       pkg.number_of_lessons ??
+      pkg.lesson_count ??
       0;
 
     const lessonsUsed =
@@ -191,18 +192,18 @@ export default function ParentPortalPage() {
       pkg.lessons_remaining ??
       pkg.lessons_left ??
       pkg.remaining_lessons ??
-      Math.max(getNumber(totalLessons) - getNumber(lessonsUsed), 0);
+      Math.max(toNumber(totalLessons) - toNumber(lessonsUsed), 0);
 
     const progressPercent =
-      getNumber(totalLessons) > 0
-        ? Math.round((getNumber(lessonsUsed) / getNumber(totalLessons)) * 100)
+      toNumber(totalLessons) > 0
+        ? Math.round((toNumber(lessonsUsed) / toNumber(totalLessons)) * 100)
         : pkg.progress_percent ?? 0;
 
     return {
-      totalLessons: getNumber(totalLessons),
-      lessonsUsed: getNumber(lessonsUsed),
-      lessonsRemaining: getNumber(lessonsRemaining),
-      progressPercent: getNumber(progressPercent),
+      totalLessons: toNumber(totalLessons),
+      lessonsUsed: toNumber(lessonsUsed),
+      lessonsRemaining: toNumber(lessonsRemaining),
+      progressPercent: toNumber(progressPercent),
       paymentStatus: pkg.payment_status ?? "N/A",
       packagePrice: pkg.package_price ?? pkg.price ?? null,
       purchaseDate: pkg.purchase_date ?? pkg.created_at ?? null,
