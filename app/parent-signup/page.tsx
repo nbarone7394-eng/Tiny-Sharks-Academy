@@ -50,11 +50,11 @@ export default function ParentSignupPage() {
         [
           {
             parent_name: parentName,
-            parent_email: email,
+            email: email,
             auth_user_id: data.user.id,
           },
         ],
-        { onConflict: "parent_email" }
+        { onConflict: "email" }
       );
 
       if (parentError) {
